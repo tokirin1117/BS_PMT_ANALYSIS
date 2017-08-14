@@ -1,7 +1,10 @@
 import os
 import csv as CSV
 import numpy as np
+import warnings
 
+# 경고 무시
+warnings.simplefilter("ignore")
 # 메모리 데이터 초기화
 RESULTS = {}
 RES_PATH = '../res'
