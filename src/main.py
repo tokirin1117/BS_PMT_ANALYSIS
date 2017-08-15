@@ -61,6 +61,8 @@ for subject,data in RESULTS.items():
     for i in range(50):
         i = i + 1
         p_f = ((0.4 * p_fe / 50) * i) + (0.8 * p_fe)
+        p_data_filtered = p_data[p_data > p_f]
+        U_ro_data_filtered = U_ro_data[p_data > p_f]
         for j in range(50):
             j = j+1
             #식값 계산
@@ -73,10 +75,9 @@ for subject,data in RESULTS.items():
             b1 = (-2 * m / (m-1)) * ((1-nu) * ((1+(m*n))/(m+n)) - nu)*(p_f - p_o)
             b2 = (2*n*(1-nu)*((m+1)) / ((m+n))*(p_f - p_o))
             b3 = ((1-(2*nu))*((m+1)) / ((m-1))*(p_f - p_o))
-
-            rf_ro_cal = pow((p_data * (m-1) + sigma) / (p_f * (m-1) + sigma),(m / (m-1)))
+            rf_ro_cal = pow((p_data_filtered * (m-1) + sigma) / (p_f * (m-1) + sigma),(m / (m-1)))
             U_ro_cal = (r_o / (2 * G)) * ((b1 * pow(rf_ro_cal,(m-1)/m)) + (b2 * pow(rf_ro_cal,(n+1)/n)) + b3)
-            V = sum((U_ro_cal - U_ro_data) ** 2) / len(U_ro_cal)
+            V = sum(pow(U_ro_cal - U_ro_data_filtered,2)) / len(U_ro_cal)
 
             if min_V == None:
                 min_i = i
