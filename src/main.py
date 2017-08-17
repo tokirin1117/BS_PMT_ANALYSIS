@@ -2,15 +2,23 @@ import os
 import csv as CSV
 import numpy as np
 import warnings
+import xlwt
+import time
+
 
 # 경고 무시
 warnings.simplefilter("ignore")
 # 메모리 데이터 초기화
 RESULTS = {}
+ABS_PATH = os.path.dirname(os.path.abspath(__file__))
 RES_PATH = '../res'
-txt_files = [f for f in os.listdir(RES_PATH) if f.endswith('.txt')]
-csv_files = [f for f in os.listdir(RES_PATH) if f.endswith('.csv')]
-
+OUTPUT_PATH = '../output'
+txt_files = [f for f in os.listdir(os.path.join(ABS_PATH,RES_PATH)) if f.endswith('.txt')]
+csv_files = [f for f in os.listdir(os.path.join(ABS_PATH,RES_PATH)) if f.endswith('.csv')]
+workbook = xlwt.Workbook(encoding='utf-8')
+workbook.default_style.font.height = 20*11
+current_milli_time = lambda: int(round(time.time() * 1000))
+output_file_name = str(current_milli_time())
 # 삼각함수
 cos = np.cos
 sin = np.sin
@@ -19,7 +27,7 @@ pow = np.power
 
 # FILE LOAD
 for txt in txt_files:
-    file_path = os.path.join(RES_PATH,txt)
+    file_path = os.path.join(ABS_PATH,RES_PATH,txt)
     basename = os.path.splitext(os.path.basename(file_path))[0]
     RESULTS[basename] = {}
     RESULTS[basename]['const'] = {}
@@ -28,7 +36,7 @@ for txt in txt_files:
         RESULTS[basename]['const'][line.split(':')[0]] = float(line.split(':')[1])
 
 for csv in csv_files:
-    file_path = os.path.join(RES_PATH,csv)
+    file_path = os.path.join(ABS_PATH,RES_PATH,csv)
     basename = os.path.splitext(os.path.basename(file_path))[0]
     RESULTS[basename]['dataset'] = {}
     f = open(file_path,newline='')
@@ -44,6 +52,12 @@ for csv in csv_files:
 print("##########################################")
 for subject,data in RESULTS.items():
     print(f'{subject}에 대한 분석을 실시합니다.')
+    # 시트 생성
+    worksheet = workbook.add_sheet(subject)
+
+    # LOAD DATASET
+    p_data = data['dataset']["p'"]
+    U_ro_data = data['dataset']["U_ro"]
     # LOAD CONST
     G = data['const']['G']
     p_fe = data['const']['p_fe']
@@ -51,13 +65,16 @@ for subject,data in RESULTS.items():
     r_o = data['const']['r_o']
     phi_r = data['const']['phi_r']
     nu = data['const']['nu']
-    min_i = 0
-    min_j = 0
+
+    # INIT RESULT PARAMS
+    min_i = None
+    min_j = None
     min_c = None
     min_phi = None
     min_V = None
-    p_data = data['dataset']["p'"]
-    U_ro_data = data['dataset']["U_ro"]
+    min_p_data_filtered = None
+    min_U_ro_data_filtered = None
+    min_U_ro_cal = None
     for i in range(50):
         i = i + 1
         p_f = ((0.4 * p_fe / 50) * i) + (0.8 * p_fe)
@@ -85,6 +102,9 @@ for subject,data in RESULTS.items():
                 min_V = V
                 min_c = c
                 min_phi = phi
+                min_p_data_filtered = p_data_filtered
+                min_U_ro_data_filtered = U_ro_data_filtered
+                min_U_ro_cal = U_ro_cal
             else:
                 if min_V >= V:
                     min_i = i
@@ -92,6 +112,29 @@ for subject,data in RESULTS.items():
                     min_V = V
                     min_c = c
                     min_phi = phi
+                    min_p_data_filtered = p_data_filtered
+                    min_U_ro_data_filtered = U_ro_data_filtered
+                    min_U_ro_cal = U_ro_cal
+
+    worksheet.write(0,0,'min_k')
+    worksheet.write(1, 0, 50*(min_i-1) + min_j)
+    worksheet.write(0,1, 'min_c')
+    worksheet.write(1, 1, min_c)
+    worksheet.write(0,2, 'min_phi')
+    worksheet.write(1, 2, min_phi)
+    worksheet.write(0,3, 'min_V')
+    worksheet.write(1, 3, min_V)
+
+    worksheet.write(0,4, 'min_p_data')
+    worksheet.write(0,5, 'min_U_ro_data')
+    worksheet.write(0,6, 'min_U_ro_cal')
+
+    for i,val in enumerate(min_p_data_filtered):
+        worksheet.write(i+1,4,val)
+    for i,val in enumerate(min_U_ro_data_filtered):
+        worksheet.write(i+1,5, val)
+    for i,val in enumerate(min_U_ro_cal):
+        worksheet.write(i+1,6, val)
 
     print(f'최소 V = {min_V}')
     print(f'k = {50*(min_i-1) + min_j}')
@@ -99,3 +142,5 @@ for subject,data in RESULTS.items():
     print(f'phi = {min_phi}')
 
     print("##########################################")
+
+workbook.save(os.path.join(ABS_PATH,OUTPUT_PATH,f'{output_file_name}.xls'))
